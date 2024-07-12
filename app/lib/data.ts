@@ -55,11 +55,19 @@ export async function fetchRevenue() {
 
 export async function fetchLatestInvoices() {
   try {
-    const latestInvoices = (
-      await http2.get<Array<Invoice>>(
-        `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
-      )
-    ).data;
+    // const latestInvoices = (
+    //   await http2.get<Array<Invoice>>(
+    //     `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
+    //   )
+    // ).data;
+
+    const latestInvoices = invoices
+      .sort((current, next) => -current.date.localeCompare(next.date))
+      .map((invoice) => ({
+        ...invoice,
+        amount: invoice.amount.toString(),
+      }))
+      .splice(0, 5);
 
     const latestFormattedInvoices = latestInvoices.map<LatestInvoice>(
       (invoice) => {
@@ -150,6 +158,8 @@ export async function fetchFilteredInvoices(
 
     const invoicesTableByQuery = filterByValue(invoices_table, query);
 
+    // console.log("invoices_table", invoices_table);
+
     const latestInvoicesTable = invoicesTableByQuery.sort(
       (current, next) => -current.date.localeCompare(next.date)
     );
@@ -198,23 +208,24 @@ export async function fetchInvoicesPages(query: string) {
 
 export async function fetchInvoiceById(id: string) {
   try {
-    const data = await sql<InvoiceForm>`
-      SELECT
-        invoices.id,
-        invoices.customer_id,
-        invoices.amount,
-        invoices.status
-      FROM invoices
-      WHERE invoices.id = ${id};
-    `;
+    const invoice = invoices.find((invoice) => invoice.id === id);
+    // const data = await sql<InvoiceForm>`
+    //   SELECT
+    //     invoices.id,
+    //     invoices.customer_id,
+    //     invoices.amount,
+    //     invoices.status
+    //   FROM invoices
+    //   WHERE invoices.id = ${id};
+    // `;
 
-    const invoice = data.rows.map((invoice) => ({
-      ...invoice,
-      // Convert amount from cents to dollars
-      amount: invoice.amount / 100,
-    }));
+    const formattedInvoice = {
+      ...invoice!,
+      amount: invoice?.amount! / 100,
+      status: invoice?.status as "pending" | "paid",
+    };
 
-    return invoice[0];
+    return formattedInvoice;
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch invoice.");
@@ -223,16 +234,24 @@ export async function fetchInvoiceById(id: string) {
 
 export async function fetchCustomers() {
   try {
-    const data = await sql<CustomerField>`
-      SELECT
-        id,
-        name
-      FROM customers
-      ORDER BY name ASC
-    `;
+    const customerFields = customers
+      .sort((current, next) => current.name.localeCompare(next.name))
+      .map<CustomerField>((customer) => ({
+        id: customer.id,
+        name: customer.name,
+      }));
 
-    const customers = data.rows;
-    return customers;
+    // const data = await sql<CustomerField>`
+    //   SELECT
+    //     id,
+    //     name
+    //   FROM customers
+    //   ORDER BY name ASC
+    // `;
+
+    // const customers = data.rows;
+
+    return customerFields;
   } catch (err) {
     console.error("Database Error:", err);
     throw new Error("Failed to fetch all customers.");
