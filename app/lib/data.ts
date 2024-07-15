@@ -162,6 +162,7 @@ export async function fetchInvoicesPages(query: string) {
 
     return Math.ceil(invoicesTableByQuery.length / ITEMS_PER_PAGE);
   } catch (error) {
+    return 0;
     console.error("Database Error:", error);
     throw new Error("Failed to fetch total number of invoices.");
   }
