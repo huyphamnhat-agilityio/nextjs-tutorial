@@ -13,40 +13,27 @@ import {
 import { formatCurrency } from "./utils";
 import axios from "axios";
 import { RESOURCE } from "../constants/resources";
-import {
-  customers,
-  invoices,
-  invoices_table,
-  revenue,
-} from "./placeholder-data";
+import { invoices_table } from "./placeholder-data";
+import { http1, http2, http3 } from "./http";
 
-const http1 = axios.create({
-  baseURL: `${process.env.MOCK_API_V1}`,
-});
-
-const http2 = axios.create({
-  baseURL: `${process.env.MOCK_API_V2}`,
-});
-
-function filterByValue<T extends Record<string, any>>(
-  array: Array<T>,
-  value: string
-) {
-  return array.filter((item) =>
-    Object.keys(item).some(
-      (k) =>
-        item[k] != null &&
-        item[k].toString().toLowerCase().includes(value.toLowerCase())
-    )
-  );
-}
+// function filterByValue<T extends Record<string, any>>(
+//   array: Array<T>,
+//   value: string
+// ) {
+//   return array.filter((item) =>
+//     Object.keys(item).some(
+//       (k) =>
+//         item[k] != null &&
+//         item[k].toString().toLowerCase().includes(value.toLowerCase())
+//     )
+//   );
+// }
 
 export async function fetchRevenue() {
   try {
-    const placeHolderRevenue = new Promise<Array<Revenue>>((resolve) => {
-      resolve(revenue);
-    });
-    return placeHolderRevenue;
+    const revenues = (await http1.get<Array<Revenue>>(`/${RESOURCE.REVENUE}`))
+      .data;
+    return revenues;
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch revenue data.");
@@ -55,19 +42,15 @@ export async function fetchRevenue() {
 
 export async function fetchLatestInvoices() {
   try {
-    // const latestInvoices = (
-    //   await http2.get<Array<Invoice>>(
-    //     `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
-    //   )
-    // ).data;
+    const latestInvoices = (
+      await http2.get<Array<Invoice>>(
+        `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
+      )
+    ).data;
 
-    const latestInvoices = invoices
-      .sort((current, next) => -current.date.localeCompare(next.date))
-      .map((invoice) => ({
-        ...invoice,
-        amount: invoice.amount.toString(),
-      }))
-      .splice(0, 5);
+    const customers = (
+      await http2.get<Array<Customer>>(`/${RESOURCE.CUSTOMER}`)
+    ).data;
 
     const latestFormattedInvoices = latestInvoices.map<LatestInvoice>(
       (invoice) => {
@@ -97,13 +80,19 @@ export async function fetchLatestInvoices() {
 
 export async function fetchCardData() {
   try {
-    const invoiceCountPromise = new Promise<number>((resolve) => {
-      resolve(invoices.length);
-    });
+    const invoices = (
+      await http2.get<Array<Invoice>>(
+        `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
+      )
+    ).data;
 
-    const customerCountPromise = new Promise<number>((resolve) => {
-      resolve(customers.length);
-    });
+    const invoiceCountPromise = invoices.length;
+
+    const customerCountPromise = (
+      await http2.get<Array<Customer>>(
+        `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
+      )
+    ).data.length;
 
     const invoiceStatusPromise = new Promise<Array<Invoice>>((resolve) => {
       resolve(
@@ -152,42 +141,13 @@ export async function fetchFilteredInvoices(
   currentPage: number
 ) {
   try {
-    // const latestInvoicesTable = invoices_table.sort(
-    //   (current, next) => -current.date.localeCompare(next.date)
-    // );
+    const filteredInvoices = (
+      await http3.get<Array<InvoicesTable>>(
+        `${RESOURCE.INVOICES_TABLE}?p=${currentPage}&l=${ITEMS_PER_PAGE}&filter=${query}&sortBy=date&order=desc`
+      )
+    ).data;
 
-    const invoicesTableByQuery = filterByValue(invoices_table, query);
-
-    // console.log("invoices_table", invoices_table);
-
-    const latestInvoicesTable = invoicesTableByQuery.sort(
-      (current, next) => -current.date.localeCompare(next.date)
-    );
-
-    const paginatedInvoicesTable = latestInvoicesTable.splice(
-      (currentPage - 1) * ITEMS_PER_PAGE,
-      currentPage * ITEMS_PER_PAGE
-    );
-
-    // const invoicesTable = new Promise<Array<InvoicesTable>>((resolve) => {
-    //   resolve(
-    //     latestInvoices.map<InvoicesTable>((invoice) => {
-    //       const customer = customers.find((c) => c.id === invoice.customer_id);
-    //       return {
-    //         id: invoice.id,
-    //         customer_id: invoice.customer_id,
-    //         name: customer?.name ?? "",
-    //         email: customer?.email ?? "",
-    //         image_url: customer?.image_url ?? "",
-    //         date: invoice.date,
-    //         amount: Number(invoice.amount),
-    //         status: invoice.status as "pending" | "paid",
-    //       };
-    //     })
-    //   );
-    // });
-
-    return paginatedInvoicesTable;
+    return filteredInvoices;
   } catch (error) {
     return [];
     // console.error("Database Error:", error);
@@ -197,7 +157,11 @@ export async function fetchFilteredInvoices(
 
 export async function fetchInvoicesPages(query: string) {
   try {
-    const invoicesTableByQuery = filterByValue(invoices_table, query);
+    const invoicesTableByQuery = (
+      await http3.get<Array<InvoicesTable>>(
+        `${RESOURCE.INVOICES_TABLE}?filter=${query}`
+      )
+    ).data;
 
     return Math.ceil(invoicesTableByQuery.length / ITEMS_PER_PAGE);
   } catch (error) {
@@ -208,48 +172,31 @@ export async function fetchInvoicesPages(query: string) {
 
 export async function fetchInvoiceById(id: string) {
   try {
-    const invoice = invoices.find((invoice) => invoice.id === id);
-    // const data = await sql<InvoiceForm>`
-    //   SELECT
-    //     invoices.id,
-    //     invoices.customer_id,
-    //     invoices.amount,
-    //     invoices.status
-    //   FROM invoices
-    //   WHERE invoices.id = ${id};
-    // `;
+    const invoice = (await http2.get<Invoice>(`/${RESOURCE.INVOICES}/${id}`))
+      .data;
 
     const formattedInvoice = {
-      ...invoice!,
-      amount: invoice?.amount! / 100,
-      status: invoice?.status as "pending" | "paid",
+      ...invoice,
+      amount: Number(invoice.amount) / 100,
+      status: invoice.status,
     };
 
     return formattedInvoice;
   } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch invoice.");
+    return undefined;
   }
 }
 
 export async function fetchCustomers() {
   try {
-    const customerFields = customers
-      .sort((current, next) => current.name.localeCompare(next.name))
-      .map<CustomerField>((customer) => ({
-        id: customer.id,
-        name: customer.name,
-      }));
+    const customers = (
+      await http2.get<Array<Customer>>(`/${RESOURCE.CUSTOMER}?sortBy=name`)
+    ).data;
 
-    // const data = await sql<CustomerField>`
-    //   SELECT
-    //     id,
-    //     name
-    //   FROM customers
-    //   ORDER BY name ASC
-    // `;
-
-    // const customers = data.rows;
+    const customerFields = customers.map<CustomerField>((customer) => ({
+      id: customer.id,
+      name: customer.name,
+    }));
 
     return customerFields;
   } catch (err) {
