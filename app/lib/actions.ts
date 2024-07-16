@@ -1,7 +1,7 @@
 "use server";
 import { z } from "zod";
 import { Customer, Invoice, InvoicesTable } from "./definitions";
-import { http2, http3 } from "./http";
+import { fetchApi, http2, http3 } from "./http";
 import { RESOURCE } from "../constants/resources";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -25,6 +25,7 @@ export async function createInvoice(formData: FormData) {
   });
 
   const amountInCents = amount * 100;
+
   const date = new Date().toISOString().split("T")[0];
 
   const invoice: Omit<Invoice, "id"> = {
@@ -34,19 +35,27 @@ export async function createInvoice(formData: FormData) {
     status,
   };
 
-  const createInvoicePromise = http2.post<Invoice>(
-    `${RESOURCE.INVOICES}`,
-    invoice
+  const formattedInvoice = {
+    ...invoice,
+    amount: Number(invoice.amount),
+  };
+
+  const createInvoicePromise = await fetchApi<Invoice>(
+    `${process.env.MOCK_API_V2}/${RESOURCE.INVOICES}`,
+    {
+      body: JSON.stringify(formattedInvoice),
+      method: "POST",
+    }
   );
 
-  const customerPromise = http2.get<Customer>(
-    `${RESOURCE.CUSTOMER}/${customerId}`
+  const customerPromise = fetchApi<Customer>(
+    `${process.env.MOCK_API_V2}/${RESOURCE.CUSTOMER}/${customerId}`
   );
 
-  const {
-    "0": { data: createdInvoice },
-    "1": { data: customer },
-  } = await Promise.all([createInvoicePromise, customerPromise]);
+  const [createdInvoice, customer] = await Promise.all([
+    createInvoicePromise,
+    customerPromise,
+  ]);
 
   if (customer) {
     const invoiceTable: InvoicesTable = {
@@ -61,9 +70,12 @@ export async function createInvoice(formData: FormData) {
     };
 
     try {
-      await http3.post<InvoicesTable>(
-        `${RESOURCE.INVOICES_TABLE}`,
-        invoiceTable
+      await fetchApi<InvoicesTable>(
+        `${process.env.MOCK_API_V3}/${RESOURCE.INVOICES_TABLE}`,
+        {
+          body: JSON.stringify(invoiceTable),
+          method: "POST",
+        }
       );
     } catch (error) {
       return {
@@ -90,15 +102,18 @@ export async function updateInvoice(id: string, formData: FormData) {
 
   const amountInCents = amount * 100;
 
-  const invoiceTablePromise = http3.get<InvoicesTable>(
-    `${RESOURCE.INVOICES_TABLE}/${id}`
+  const invoiceTablePromise = fetchApi<InvoicesTable>(
+    `${process.env.MOCK_API_V3}/${RESOURCE.INVOICES_TABLE}/${id}`
   );
-  const invoicePromise = http2.get<Invoice>(`${RESOURCE.INVOICES}/${id}`);
 
-  const {
-    "0": { data: invoiceTable },
-    "1": { data: invoice },
-  } = await Promise.all([invoiceTablePromise, invoicePromise]);
+  const invoicePromise = await fetchApi<Invoice>(
+    `${process.env.MOCK_API_V2}/${RESOURCE.INVOICES}/${id}`
+  );
+
+  const [invoiceTable, invoice] = await Promise.all([
+    invoiceTablePromise,
+    invoicePromise,
+  ]);
 
   const updateInvoiceTable: InvoicesTable = {
     ...invoiceTable,
@@ -116,11 +131,14 @@ export async function updateInvoice(id: string, formData: FormData) {
 
   try {
     await Promise.all([
-      http3.put<InvoicesTable>(
-        `${RESOURCE.INVOICES_TABLE}/${id}`,
-        updateInvoiceTable
+      fetchApi<InvoicesTable>(
+        `${process.env.MOCK_API_V3}/${RESOURCE.INVOICES_TABLE}/${id}`,
+        { body: JSON.stringify(updateInvoiceTable), method: "PUT" }
       ),
-      http2.put<Invoice>(`${RESOURCE.INVOICES}/${id}`, updateInvoice),
+      fetchApi<Invoice>(
+        `${process.env.MOCK_API_V2}/${RESOURCE.INVOICES}/${id}`,
+        { body: JSON.stringify(updateInvoice), method: "PUT" }
+      ),
     ]);
   } catch (error) {
     return { message: "Database Error: Failed to Update Invoice." };
@@ -132,11 +150,21 @@ export async function updateInvoice(id: string, formData: FormData) {
 }
 
 export const deleteInvoice = async (id: string) => {
-  const deleteInvoiceTablePromise = http3.delete<InvoicesTable>(
-    `${RESOURCE.INVOICES_TABLE}/${id}`
+  // const deleteInvoiceTablePromise = http3.delete<InvoicesTable>(
+  //   `${RESOURCE.INVOICES_TABLE}/${id}`
+  // );
+  // const deleteInvoicePromise = http2.delete<Invoice>(
+  //   `${RESOURCE.INVOICES}/${id}`
+  // );
+
+  const deleteInvoiceTablePromise = fetchApi<InvoicesTable>(
+    `${process.env.MOCK_API_V3}/${RESOURCE.INVOICES_TABLE}/${id}`,
+    { method: "DELETE" }
   );
-  const deleteInvoicePromise = http2.delete<Invoice>(
-    `${RESOURCE.INVOICES}/${id}`
+
+  const deleteInvoicePromise = fetchApi<Invoice>(
+    `${process.env.MOCK_API_V2}/${RESOURCE.INVOICES}/${id}`,
+    { method: "DELETE" }
   );
 
   try {

@@ -86,3 +86,8 @@ export type InvoiceForm = {
   amount: number;
   status: "pending" | "paid";
 };
+
+export type RequestOptions = {
+  body?: BodyInit | null | undefined;
+  method?: "GET" | "POST" | "PUT" | "DELETE";
+};
