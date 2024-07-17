@@ -31,8 +31,7 @@ export async function fetchRevenue() {
     const revenues = await fetchApi<Array<Revenue>>(
       `${process.env.MOCK_API_V1}/${RESOURCE.REVENUE}`
     );
-    // const revenues = (await http1.get<Array<Revenue>>(`/${RESOURCE.REVENUE}`))
-    //   .data;
+
     return revenues;
   } catch (error) {
     console.error("Database Error:", error);
@@ -42,19 +41,9 @@ export async function fetchRevenue() {
 
 export async function fetchLatestInvoices() {
   try {
-    // const latestInvoices = (
-    //   await http2.get<Array<Invoice>>(
-    //     `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
-    //   )
-    // ).data;
-
     const latestInvoices = await fetchApi<Array<Invoice>>(
       `${process.env.MOCK_API_V2}/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
     );
-
-    // const customers = (
-    //   await http2.get<Array<Customer>>(`/${RESOURCE.CUSTOMER}`)
-    // ).data;
 
     const customers = await fetchApi<Array<Customer>>(
       `${process.env.MOCK_API_V2}/${RESOURCE.CUSTOMER}`
@@ -88,21 +77,9 @@ export async function fetchLatestInvoices() {
 
 export async function fetchCardData() {
   try {
-    // const invoices = (
-    //   await http2.get<Array<Invoice>>(
-    //     `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
-    //   )
-    // ).data.length;
-
     const invoices = await fetchApi<Array<Invoice>>(
       `${process.env.MOCK_API_V2}/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
     );
-
-    // const customerCountPromise = (
-    //   await http2.get<Array<Customer>>(
-    //     `/${RESOURCE.INVOICES}?p=1&l=5&sortBy=date&order=desc`
-    //   )
-    // ).data.length;
 
     const customersPromise = fetchApi<Array<Customer>>(
       `${process.env.MOCK_API_V2}/${RESOURCE.CUSTOMER}?p=1&l=5&sortBy=date&order=desc`
@@ -151,31 +128,17 @@ export async function fetchFilteredInvoices(
   currentPage: number
 ) {
   try {
-    // const filteredInvoices = (
-    //   await http3.get<Array<InvoicesTable>>(
-    //     `${RESOURCE.INVOICES_TABLE}?p=${currentPage}&l=${ITEMS_PER_PAGE}&filter=${query}&sortBy=date&order=desc`
-    //   )
-    // ).data;
-
     const filteredInvoices = await fetchApi<Array<InvoicesTable>>(
       `${process.env.MOCK_API_V3}/${RESOURCE.INVOICES_TABLE}?p=${currentPage}&l=${ITEMS_PER_PAGE}&filter=${query}&sortBy=date&order=desc`
     );
     return filteredInvoices;
   } catch (error) {
     return [];
-    // console.error("Database Error:", error);
-    // throw new Error("Failed to fetch invoices.");
   }
 }
 
 export async function fetchInvoicesPages(query: string) {
   try {
-    // const invoicesTableByQuery = (
-    //   await http3.get<Array<InvoicesTable>>(
-    //     `${RESOURCE.INVOICES_TABLE}?filter=${query}`
-    //   )
-    // ).data;
-
     const invoicesTableByQuery = await fetchApi<Array<InvoicesTable>>(
       `${process.env.MOCK_API_V3}/${RESOURCE.INVOICES_TABLE}?filter=${query}`
     );
@@ -183,16 +146,11 @@ export async function fetchInvoicesPages(query: string) {
     return Math.ceil(invoicesTableByQuery.length / ITEMS_PER_PAGE);
   } catch (error) {
     return 0;
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch total number of invoices.");
   }
 }
 
 export async function fetchInvoiceById(id: string) {
   try {
-    // const invoice = (await http2.get<Invoice>(`/${RESOURCE.INVOICES}/${id}`))
-    //   .data;
-
     const invoice = await fetchApi<Invoice>(
       `${process.env.MOCK_API_V2}/${RESOURCE.INVOICES}/${id}`
     );
@@ -211,10 +169,6 @@ export async function fetchInvoiceById(id: string) {
 
 export async function fetchCustomers() {
   try {
-    // const customers = (
-    //   await http2.get<Array<Customer>>(`/${RESOURCE.CUSTOMER}?sortBy=name`)
-    // ).data;
-
     const customers = await fetchApi<Array<Customer>>(
       `${process.env.MOCK_API_V2}/${RESOURCE.CUSTOMER}?sortBy=name`
     );

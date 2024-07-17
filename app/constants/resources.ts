@@ -4,4 +4,5 @@ export const RESOURCE = {
   INVOICE_STATUS: "invoice-status",
   CUSTOMER: "customer",
   INVOICES_TABLE: "invoices_table",
+  USERS: "users",
 } as const;

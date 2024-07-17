@@ -6,6 +6,8 @@ import { RESOURCE } from "../constants/resources";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { invoices, invoices_table } from "./placeholder-data";
+import { signIn } from "@/auth";
+import { AuthError } from "next-auth";
 
 export type State = {
   errors?: {
@@ -119,8 +121,6 @@ export async function createInvoice(
 
 const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 
-// ...
-
 export async function updateInvoice(
   id: string,
   prevState: State,
@@ -191,13 +191,6 @@ export async function updateInvoice(
 }
 
 export const deleteInvoice = async (id: string) => {
-  // const deleteInvoiceTablePromise = http3.delete<InvoicesTable>(
-  //   `${RESOURCE.INVOICES_TABLE}/${id}`
-  // );
-  // const deleteInvoicePromise = http2.delete<Invoice>(
-  //   `${RESOURCE.INVOICES}/${id}`
-  // );
-
   const deleteInvoiceTablePromise = fetchApi<InvoicesTable>(
     `${process.env.MOCK_API_V3}/${RESOURCE.INVOICES_TABLE}/${id}`,
     { method: "DELETE" }
@@ -216,3 +209,22 @@ export const deleteInvoice = async (id: string) => {
 
   revalidatePath("/dashboard/invoices");
 };
+
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData
+) {
+  try {
+    await signIn("credentials", formData);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return "Invalid credentials.";
+        default:
+          return "Something went wrong.";
+      }
+    }
+    throw error;
+  }
+}
