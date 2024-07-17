@@ -22,9 +22,7 @@ const fetchApi = async <T>(url: string, options?: RequestInit) => {
     body: options?.body,
   });
 
-  if (response.ok) {
-    return response.json() as T;
-  }
+  if (response.ok) return response.json() as T;
 
   throw new Error(`Failed to fetch ${url}: ${response.status}`);
 };
